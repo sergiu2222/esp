@@ -1,0 +1,25 @@
+-- Configuration
+local userInputService = game:GetService("UserInputService")
+local savedTeleportPosition = nil
+
+-- Function to teleport to the saved position
+local function teleportToSavedPosition()
+    local player = game.Players.LocalPlayer
+    if savedTeleportPosition then
+        if player.Character and player.Character:IsDescendantOf(game.Workspace) then
+            player.Character.HumanoidRootPart.CFrame = CFrame.new(savedTeleportPosition)
+            print("Teleported to saved position:", savedTeleportPosition)
+        else
+            print("Player character not found or not in Workspace.")
+        end
+    else
+        print("No teleport position saved.")
+    end
+end
+
+-- Connect the teleportToSavedPosition function to a key press event (e.g., "T" key)
+userInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.T then
+        teleportToSavedPosition()
+    end
+end)
