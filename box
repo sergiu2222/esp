@@ -1,5 +1,6 @@
 -- Configuration
 local espBoxes = {}
+local userInputService = game:GetService("UserInputService")
 
 -- Function to create ESP box for a player
 local function createESP(player)
@@ -85,5 +86,19 @@ game.Players.LocalPlayer.CharacterRemoving:Connect(function()
     end
     espBoxes = {}
 end)
+
+-- Function to destroy the script when "P" key is pressed
+local function destroyScriptOnKeyPress(input)
+    if input.KeyCode == Enum.KeyCode.P then
+        for _, box in ipairs(espBoxes) do
+            box:Remove()
+        end
+        userInputService.InputBegan:Disconnect(destroyScriptOnKeyPress)
+        script:Destroy()
+    end
+end
+
+-- Connect the destroyScriptOnKeyPress function to InputBegan event
+userInputService.InputBegan:Connect(destroyScriptOnKeyPress)
 
 return espBoxes  -- Return espBoxes for reference in another script if needed
