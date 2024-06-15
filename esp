@@ -1,0 +1,144 @@
+local espBoxes = {}
+local glowEffects = {}
+local healthBars = {}
+local nameLabels = {}
+
+-- Function to create ESP for a player
+local function createESP(player)
+    -- Create a square drawing for ESP
+    local espBox = Drawing.new("Square")
+    espBox.Visible = true
+    espBox.Thickness = 2
+    espBox.Transparency = 1
+
+    -- Add the espBox to the espBoxes table
+    table.insert(espBoxes, espBox)
+
+    -- Create a health bar for the player
+    local healthBar = Drawing.new("Rectangle")
+    healthBar.Visible = true
+    healthBar.Thickness = 2
+    healthBar.Transparency = 1
+    healthBar.Color = Color3.fromRGB(255, 0, 0)  -- Red color for health bar
+
+    -- Add the healthBar to the healthBars table
+    table.insert(healthBars, healthBar)
+
+    -- Create a name label for the player
+    local nameLabel = Drawing.new("Text")
+    nameLabel.Visible = true
+    nameLabel.Size = 14
+    nameLabel.Center = true
+    nameLabel.Outline = true
+    nameLabel.OutlineColor = Color3.new(0, 0, 0)
+    nameLabel.Transparency = 1
+
+    -- Add the nameLabel to the nameLabels table
+    table.insert(nameLabels, nameLabel)
+
+    -- Connect a RenderStepped event to update ESP visuals
+    game:GetService("RunService").RenderStepped:Connect(function()
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = player.Character.HumanoidRootPart
+            local camera = workspace.CurrentCamera
+            local screenPos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
+
+            if onScreen then
+                -- Calculate ray from camera to player's rootPart
+                local origin = camera.CFrame.Position
+                local direction = (rootPart.Position - origin).unit
+                local ray = Ray.new(origin, direction * 1000)
+
+                -- Check if the ray hits any part except the camera and player's character
+                local hitPart = workspace:FindPartOnRayWithIgnoreList(ray, {camera, player.Character})
+
+                if hitPart and hitPart:IsDescendantOf(player.Character) then
+                    espBox.Color = Color3.fromRGB(0, 255, 0)  -- Green if visible
+                else
+                    espBox.Color = Color3.fromRGB(255, 0, 0)  -- Red if behind wall
+                end
+
+                -- Adjust size and position of the ESP box based on screen position
+                espBox.Size = Vector2.new(2000 / screenPos.Z, 4000 / screenPos.Z)
+                espBox.Position = Vector2.new(screenPos.X - espBox.Size.X / 2, screenPos.Y - espBox.Size.Y / 2)
+                espBox.Visible = true
+
+                -- Update health bar position and size relative to ESP box
+                local healthBarHeight = 5
+                healthBar.Size = Vector2.new(espBox.Size.X, healthBarHeight)
+                healthBar.Position = Vector2.new(espBox.Position.X, espBox.Position.Y + espBox.Size.Y / 2 + healthBarHeight / 2 + 2)
+                healthBar.Visible = true
+
+                -- Update name label position and text relative to ESP box
+                local playerName = player.Name
+                nameLabel.Text = playerName
+                nameLabel.Position = Vector2.new(espBox.Position.X + espBox.Size.X / 2, espBox.Position.Y - 20)
+                nameLabel.Visible = true
+            else
+                -- Hide elements if player is off-screen
+                espBox.Visible = false
+                healthBar.Visible = false
+                nameLabel.Visible = false
+            end
+        else
+            -- Hide elements if player's character is not found
+            espBox.Visible = false
+            healthBar.Visible = false
+            nameLabel.Visible = false
+        end
+    end)
+
+    -- Function to create glow effect around the player
+    local function createGlow()
+        local glow = Instance.new("Highlight")
+        glow.FillColor = espBox.Color
+        glow.OutlineColor = Color3.new(1, 1, 1)
+        glow.OutlineTransparency = 0.5
+        glow.FillTransparency = 0.5
+        glow.Adornee = player.Character
+        glow.Parent = player.Character
+
+        -- Add the glow effect to the glowEffects table
+        table.insert(glowEffects, glow)
+
+        -- Connect a RenderStepped event to update glow effect
+        game:GetService("RunService").RenderStepped:Connect(function()
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local rootPart = player.Character.HumanoidRootPart
+                local camera = workspace.CurrentCamera
+                local screenPos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
+
+                if onScreen then
+                    -- Calculate ray from camera to player's rootPart
+                    local origin = camera.CFrame.Position
+                    local direction = (rootPart.Position - origin).unit
+                    local ray = Ray.new(origin, direction * 1000)
+
+                    -- Check if the ray hits any part except the camera and player's character
+                    local hitPart = workspace:FindPartOnRayWithIgnoreList(ray, {camera, player.Character})
+
+                    if hitPart and hitPart:IsDescendantOf(player.Character) then
+                        glow.FillColor = Color3.fromRGB(0, 255, 0)  -- Green if visible
+                    else
+                        glow.FillColor = Color3.fromRGB(255, 0, 0)  -- Red if behind wall
+                    end
+                end
+            end
+        end)
+    end
+
+    -- Call createGlow to initialize glow effect
+    createGlow()
+end
+
+-- Loop through existing players and create ESP for each one
+for _, player in pairs(game.Players:GetPlayers()) do
+    if player ~= game.Players.LocalPlayer then
+        createESP(player)
+    end
+end
+
+-- Connect an event to create ESP for newly added players
+game.Players.PlayerAdded:Connect(function(player)
+    createESP(player)
+end)
