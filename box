@@ -123,4 +123,21 @@ game.Players.LocalPlayer.CharacterRemoving:Connect(function()
     distanceLabels = {}
 end)
 
+-- Function to destroy the script when "P" key is pressed
+local function destroyScriptOnKeyPress(input)
+    if input.KeyCode == Enum.KeyCode.P then
+        for _, box in ipairs(espBoxes) do
+            box:Remove()
+        end
+        for _, label in ipairs(distanceLabels) do
+            label:Remove()
+        end
+        userInputService.InputBegan:Disconnect(destroyScriptOnKeyPress)
+        script:Destroy()
+    end
+end
+
+-- Connect the destroyScriptOnKeyPress function to InputBegan event
+userInputService.InputBegan:Connect(destroyScriptOnKeyPress)
+
 return espBoxes, distanceLabels  -- Return espBoxes and distanceLabels for reference in another script if needed
