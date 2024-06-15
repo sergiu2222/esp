@@ -1,0 +1,89 @@
+-- Configuration
+local espBoxes = {}
+
+-- Function to create ESP box for a player
+local function createESP(player)
+    local espBox = Drawing.new("Square")
+    espBox.Visible = false
+    espBox.Color = Color3.fromRGB(255, 255, 255)
+    espBox.Thickness = 2
+    espBox.Transparency = 1
+    espBox.Filled = false
+
+    table.insert(espBoxes, espBox)
+
+    player.CharacterAdded:Connect(function(character)
+        espBox.Visible = true
+    end)
+
+    player.CharacterRemoving:Connect(function()
+        espBox.Visible = false
+    end)
+
+    game:GetService("RunService").RenderStepped:Connect(function()
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = player.Character.HumanoidRootPart
+            local camera = workspace.CurrentCamera
+            local screenPos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
+
+            if onScreen then
+                local origin = camera.CFrame.Position
+                local direction = (rootPart.Position - origin).unit
+                local ray = Ray.new(origin, direction * 1000)
+                local hitPart = workspace:FindPartOnRayWithIgnoreList(ray, {camera, player.Character})
+
+                if hitPart and hitPart:IsDescendantOf(player.Character) then
+                    espBox.Color = Color3.fromRGB(0, 255, 0)  -- Green for visible
+                else
+                    espBox.Color = Color3.fromRGB(255, 0, 0)  -- Red for behind wall
+                end
+
+                espBox.Size = Vector2.new(2000 / screenPos.Z, 4000 / screenPos.Z)
+                espBox.Position = Vector2.new(screenPos.X - espBox.Size.X / 2, screenPos.Y - espBox.Size.Y / 2)
+                espBox.Visible = true
+            else
+                espBox.Visible = false
+            end
+        else
+            espBox.Visible = false
+        end
+    end)
+end
+
+-- Loop through existing players and create ESP for each one
+for _, player in pairs(game.Players:GetPlayers()) do
+    if player ~= game.Players.LocalPlayer then
+        createESP(player)
+    end
+end
+
+-- Connect an event to create ESP for newly added players
+game.Players.PlayerAdded:Connect(function(player)
+    if player ~= game.Players.LocalPlayer then
+        createESP(player)
+    end
+end)
+
+-- Cleanup function for removing disconnected players
+local function cleanupPlayer(player)
+    local espBox = espBoxes[player]
+    if espBox then
+        espBox:Remove()
+        espBoxes[player] = nil
+    end
+end
+
+-- Connect an event to handle player removal
+game.Players.PlayerRemoving:Connect(function(player)
+    cleanupPlayer(player)
+end)
+
+-- Clean up for local player leaving the game
+game.Players.LocalPlayer.CharacterRemoving:Connect(function()
+    for _, box in ipairs(espBoxes) do
+        box:Remove()
+    end
+    espBoxes = {}
+end)
+
+return espBoxes  -- Return espBoxes for reference in another script if needed
