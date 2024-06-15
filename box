@@ -2,6 +2,7 @@
 local espBoxes = {}
 local distanceLabels = {}
 local userInputService = game:GetService("UserInputService")
+local MAX_DISTANCE = 1000  -- Maximum distance in studs to display ESP and distance label
 
 -- Function to create ESP box and distance label for a player
 local function createESP(player)
@@ -40,33 +41,37 @@ local function createESP(player)
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local rootPart = player.Character.HumanoidRootPart
             local camera = workspace.CurrentCamera
-            local screenPos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
+            local playerPosition = rootPart.Position
+            local localPosition = camera.CFrame.Position
+            local distance = (playerPosition - localPosition).Magnitude
 
-            if onScreen then
-                local origin = camera.CFrame.Position
-                local direction = (rootPart.Position - origin).unit
-                local ray = Ray.new(origin, direction * 1000)
-                local hitPart = workspace:FindPartOnRayWithIgnoreList(ray, {camera, player.Character})
+            if distance <= MAX_DISTANCE then
+                local screenPos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
 
-                if hitPart and hitPart:IsDescendantOf(player.Character) then
-                    espBox.Color = Color3.fromRGB(0, 255, 0)  -- Green for visible
+                if onScreen then
+                    local origin = camera.CFrame.Position
+                    local direction = (rootPart.Position - origin).unit
+                    local ray = Ray.new(origin, direction * 1000)
+                    local hitPart = workspace:FindPartOnRayWithIgnoreList(ray, {camera, player.Character})
+
+                    if hitPart and hitPart:IsDescendantOf(player.Character) then
+                        espBox.Color = Color3.fromRGB(0, 255, 0)  -- Green for visible
+                    else
+                        espBox.Color = Color3.fromRGB(255, 0, 0)  -- Red for behind wall
+                    end
+
+                    espBox.Size = Vector2.new(2000 / screenPos.Z, 4000 / screenPos.Z)
+                    espBox.Position = Vector2.new(screenPos.X - espBox.Size.X / 2, screenPos.Y - espBox.Size.Y / 2)
+                    espBox.Visible = true
+
+                    -- Update distance label
+                    distanceLabel.Text = string.format("%.1f", distance) .. "  m"
+                    distanceLabel.Position = Vector2.new(screenPos.X, screenPos.Y + espBox.Size.Y / 2 + 10)
+                    distanceLabel.Visible = true
                 else
-                    espBox.Color = Color3.fromRGB(255, 0, 0)  -- Red for behind wall
+                    espBox.Visible = false
+                    distanceLabel.Visible = false
                 end
-
-                espBox.Size = Vector2.new(2000 / screenPos.Z, 4000 / screenPos.Z)
-                espBox.Position = Vector2.new(screenPos.X - espBox.Size.X / 2, screenPos.Y - espBox.Size.Y / 2)
-                espBox.Visible = true
-
-                -- Calculate distance and update distance label
-                local playerPosition = rootPart.Position
-                local localPosition = camera.CFrame.Position
-                local distance = (playerPosition - localPosition).Magnitude
-                distanceLabel.Text = string.format("%.1f", distance) .. "  m"
-
-                -- Position the distance label centered at the bottom of the ESP box
-                distanceLabel.Position = Vector2.new(screenPos.X, screenPos.Y + espBox.Size.Y / 2 + 10)
-                distanceLabel.Visible = true
             else
                 espBox.Visible = false
                 distanceLabel.Visible = false
