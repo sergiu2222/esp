@@ -1,0 +1,19 @@
+-- Configuration
+local userInputService = game:GetService("UserInputService")
+local savedTeleportPosition = nil
+
+-- Function to save the current player position as teleport zone
+local function saveTeleportPosition()
+    local player = game.Players.LocalPlayer
+    if player.Character then
+        savedTeleportPosition = player.Character.HumanoidRootPart.Position
+        print("Teleport position saved:", savedTeleportPosition)
+    end
+end
+
+-- Connect the saveTeleportPosition function to a key press event (e.g., "E" key)
+userInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.E then
+        saveTeleportPosition()
+    end
+end)
