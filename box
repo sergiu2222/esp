@@ -1,8 +1,9 @@
 -- Configuration
 local espBoxes = {}
+local distanceLabels = {}
 local userInputService = game:GetService("UserInputService")
 
--- Function to create ESP box for a player
+-- Function to create ESP box and distance label for a player
 local function createESP(player)
     local espBox = Drawing.new("Square")
     espBox.Visible = false
@@ -11,14 +12,28 @@ local function createESP(player)
     espBox.Transparency = 1
     espBox.Filled = false
 
+    local distanceLabel = Drawing.new("Text")
+    distanceLabel.Visible = false
+    distanceLabel.Color = Color3.fromRGB(50, 205, 50)  -- Lime green color
+    distanceLabel.Size = 18  -- Increased font size
+    distanceLabel.Center = true
+    distanceLabel.Outline = true
+    distanceLabel.OutlineColor = Color3.fromRGB(0, 0, 0)
+    distanceLabel.Transparency = 1  -- Fully opaque
+    distanceLabel.Font = Drawing.Fonts.Plex
+    distanceLabel.Bold = true  -- Make the text bold
+
     table.insert(espBoxes, espBox)
+    table.insert(distanceLabels, distanceLabel)
 
     player.CharacterAdded:Connect(function(character)
         espBox.Visible = true
+        distanceLabel.Visible = true
     end)
 
     player.CharacterRemoving:Connect(function()
         espBox.Visible = false
+        distanceLabel.Visible = false
     end)
 
     game:GetService("RunService").RenderStepped:Connect(function()
@@ -42,11 +57,23 @@ local function createESP(player)
                 espBox.Size = Vector2.new(2000 / screenPos.Z, 4000 / screenPos.Z)
                 espBox.Position = Vector2.new(screenPos.X - espBox.Size.X / 2, screenPos.Y - espBox.Size.Y / 2)
                 espBox.Visible = true
+
+                -- Calculate distance and update distance label
+                local playerPosition = rootPart.Position
+                local localPosition = camera.CFrame.Position
+                local distance = (playerPosition - localPosition).Magnitude
+                distanceLabel.Text = string.format("%.1f", distance) .. "  m"
+
+                -- Position the distance label centered at the bottom of the ESP box
+                distanceLabel.Position = Vector2.new(screenPos.X, screenPos.Y + espBox.Size.Y / 2 + 10)
+                distanceLabel.Visible = true
             else
                 espBox.Visible = false
+                distanceLabel.Visible = false
             end
         else
             espBox.Visible = false
+            distanceLabel.Visible = false
         end
     end)
 end
@@ -68,9 +95,14 @@ end)
 -- Cleanup function for removing disconnected players
 local function cleanupPlayer(player)
     local espBox = espBoxes[player]
+    local distanceLabel = distanceLabels[player]
     if espBox then
         espBox:Remove()
         espBoxes[player] = nil
+    end
+    if distanceLabel then
+        distanceLabel:Remove()
+        distanceLabels[player] = nil
     end
 end
 
@@ -84,21 +116,11 @@ game.Players.LocalPlayer.CharacterRemoving:Connect(function()
     for _, box in ipairs(espBoxes) do
         box:Remove()
     end
+    for _, label in ipairs(distanceLabels) do
+        label:Remove()
+    end
     espBoxes = {}
+    distanceLabels = {}
 end)
 
--- Function to destroy the script when "P" key is pressed
-local function destroyScriptOnKeyPress(input)
-    if input.KeyCode == Enum.KeyCode.P then
-        for _, box in ipairs(espBoxes) do
-            box:Remove()
-        end
-        userInputService.InputBegan:Disconnect(destroyScriptOnKeyPress)
-        script:Destroy()
-    end
-end
-
--- Connect the destroyScriptOnKeyPress function to InputBegan event
-userInputService.InputBegan:Connect(destroyScriptOnKeyPress)
-
-return espBoxes  -- Return espBoxes for reference in another script if needed
+return espBoxes, distanceLabels  -- Return espBoxes and distanceLabels for reference in another script if needed
