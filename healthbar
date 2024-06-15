@@ -1,0 +1,106 @@
+-- Configuration
+local healthBars = {}
+
+-- Function to create health bar for a player
+local function createHealthBar(player, espBoxes)
+    local healthBar = Drawing.new("Square")
+    healthBar.Visible = false
+    healthBar.Color = Color3.fromRGB(0, 255, 0)
+    healthBar.Thickness = 4
+    healthBar.Transparency = 0.8
+    healthBar.Filled = true
+
+    table.insert(healthBars, healthBar)
+
+    player.CharacterAdded:Connect(function(character)
+        if player ~= game.Players.LocalPlayer then
+            healthBar.Visible = true
+        end
+    end)
+
+    player.CharacterRemoving:Connect(function()
+        healthBar.Visible = false
+    end)
+
+    game:GetService("RunService").RenderStepped:Connect(function()
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = player.Character.HumanoidRootPart
+            local camera = workspace.CurrentCamera
+            local screenPos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
+
+            if onScreen then
+                local espBox = espBoxes[player]
+                if espBox and espBox.Visible then
+                    local origin = camera.CFrame.Position
+                    local direction = (rootPart.Position - origin).unit
+                    local ray = Ray.new(origin, direction * 1000)
+                    local hitPart = workspace:FindPartOnRayWithIgnoreList(ray, {camera, player.Character})
+
+                    if hitPart and hitPart:IsDescendantOf(player.Character) then
+                        healthBar.Color = Color3.fromRGB(0, 255, 0)  -- Green for visible
+                    else
+                        healthBar.Color = Color3.fromRGB(255, 0, 0)  -- Red for behind wall
+                    end
+
+                    local healthRatio = player.Character.Humanoid.Health / player.Character.Humanoid.MaxHealth
+                    healthBar.Size = Vector2.new(40 * healthRatio, 4)  -- Adjusted size (width, height)
+                    
+                    -- Center health bar below the ESP box
+                    healthBar.Position = Vector2.new(screenPos.X - healthBar.Size.X / 2, screenPos.Y + espBox.Size.Y / 2 + 5)
+                    
+                    healthBar.OutlineColor = Color3.fromRGB(0, 0, 0)  -- Black outline
+                    healthBar.OutlineThickness = 2
+                    healthBar.Transparency = 0.5  -- Reduced transparency
+                    healthBar.Visible = true
+                else
+                    healthBar.Visible = false
+                end
+            else
+                healthBar.Visible = false
+            end
+        else
+            healthBar.Visible = false
+        end
+    end)
+end
+
+-- Fetch espBoxes from the other script
+local espBoxesScript = require(game.ServerScriptService.BoxESP)  -- Adjust the path as per your setup
+
+-- Loop through existing players and create health bars for each one
+for _, player in pairs(game.Players:GetPlayers()) do
+    if player ~= game.Players.LocalPlayer then
+        createHealthBar(player, espBoxesScript)
+    end
+end
+
+-- Connect an event to create health bars for newly added players
+game.Players.PlayerAdded:Connect(function(player)
+    if player ~= game.Players.LocalPlayer then
+        createHealthBar(player, espBoxesScript)
+    end
+end)
+
+-- Cleanup function for removing disconnected players
+local function cleanupPlayer(player)
+    local healthBar = healthBars[player]
+    if healthBar then
+        healthBar:Remove()
+        healthBars[player] = nil
+    end
+end
+
+-- Connect an event to handle player removal
+game.Players.PlayerRemoving:Connect(function(player)
+    cleanupPlayer(player)
+end)
+
+-- Clean up for local player leaving the game
+game.Players.LocalPlayer.CharacterRemoving:Connect(function()
+    for _, bar in ipairs(healthBars) do
+        bar:Remove()
+    end
+    healthBars = {}
+end)
+
+return healthBars  -- Return healthBars for reference in another script if needed
